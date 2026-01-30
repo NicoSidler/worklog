@@ -1,0 +1,18 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+
+# Data files (optional – decide what you want to track)
+worklog/work_log.csv
+*.json
