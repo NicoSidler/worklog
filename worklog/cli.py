@@ -15,6 +15,7 @@ import argparse
 from datetime import date, timedelta
 from pathlib import Path
 import json
+from .reports import totals_by_project, minutes_to_hhmm, summary
 
 
 
@@ -154,6 +155,18 @@ def cmd_report(args: argparse.Namespace) -> None:
         out_path.write_text(out_text, encoding="utf-8")
         print(f"Wrote JSON report to {out_path.resolve()}")
 
+def cmd_summary(args: argparse.Namespace) -> None:
+    entries = load_entries()
+
+    data = summary(entries)
+
+    print("Summary")
+    print(f"- Entries: {data['entries']}")
+    print(f"- Total minutes: {data['total_minutes']} min ({minutes_to_hhmm(data['total_minutes'])})")
+    print(f"- Days with entries: {data['days']}")
+
+    if data["days"] > 0:
+        print(f"- Average per day: {data['avg_minutes_per_day']:.1f} min")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -182,10 +195,9 @@ def build_parser() -> argparse.ArgumentParser:
     # Subcommands (list, totals, add, report, ...)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # ... keep adding your subparsers below ...
-    return parser
 
 
+    
     # Command: list
     p_list = subparsers.add_parser("list", help="List entries (newest first).")
     p_list.add_argument("--project", help="Only show entries for this project.")
@@ -210,7 +222,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_report.add_argument("--json", help="Write the report to a JSON file (optional).")
     p_report.set_defaults(func=cmd_report)
 
-
+    # Command: summary
+    p_summary = subparsers.add_parser(
+        "summary",
+        help="Show overall summary statistics."
+    )
+    p_summary.set_defaults(func=cmd_summary)
+  
     return parser
 
 
