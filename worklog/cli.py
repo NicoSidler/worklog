@@ -7,7 +7,7 @@ from . import __version__
 import argparse
 from datetime import date
 
-from .storage import load_entries, save_entries, DATA_FILE
+from .storage import load_entries, add_entry, DB_FILE
 from .models import WorkEntry
 from .reports import totals_by_project, minutes_to_hhmm
 
@@ -87,15 +87,14 @@ def cmd_totals(args: argparse.Namespace) -> None:
 
 
 def cmd_add(args: argparse.Namespace) -> None:
-    # Add an entry via arguments, then save.
-    entries = load_entries()
-
-    # args.date is already a date object because we used type=parse_date_iso
+    # Add an entry via arguments, then store it in SQLite.
     entry = WorkEntry(day=args.date, project=args.project, minutes=args.minutes)
-    entries.append(entry)
 
-    save_entries(entries)
-    print(f"Added. Saved to {DATA_FILE.resolve()}")
+    add_entry(entry)
+
+
+   # Print where the DB file lives, useful on Windows.
+    print(f"Added. Saved to {DB_FILE.resolve()}")
 
 
 def cmd_report(args: argparse.Namespace) -> None:

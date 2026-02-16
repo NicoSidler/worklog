@@ -1,46 +1,74 @@
 # worklog/storage.py
-# Topic: CSV storage for the work log
-# Goal: load WorkEntry objects from CSV, and save them back to CSV
+# SQLite storage layer with proper CRUD operations
 
 from __future__ import annotations
 
 from pathlib import Path
-import csv
+import sqlite3
 
 from .models import WorkEntry
 
 
-# BASE_DIR is the folder where this module file lives (worklog/).
 BASE_DIR = Path(__file__).resolve().parent
+DB_FILE = BASE_DIR / "work_log.db"
 
-# Store the CSV next to this package (worklog/work_log.csv).
-DATA_FILE = BASE_DIR / "work_log.csv"
 
-# CSV columns (header row)
-FIELDNAMES = ["date", "project", "minutes"]
+def get_connection() -> sqlite3.Connection:
+    return sqlite3.connect(DB_FILE)
+
+
+def initialize_database() -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                day TEXT NOT NULL,
+                project TEXT NOT NULL,
+                minutes INTEGER NOT NULL
+            )
+            """
+        )
+
+
+# ---------- CRUD ----------
+
+def add_entry(entry: WorkEntry) -> None:
+    initialize_database()
+
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO entries (day, project, minutes) VALUES (?, ?, ?)",
+            (entry.day.isoformat(), entry.project, entry.minutes),
+        )
 
 
 def load_entries() -> list[WorkEntry]:
-    # Load work entries from CSV into WorkEntry objects.
-    if not DATA_FILE.exists():
-        return []
+    initialize_database()
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT day, project, minutes FROM entries"
+        ).fetchall()
 
     entries: list[WorkEntry] = []
 
-    with DATA_FILE.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            entry = WorkEntry.from_row(row)
-            if entry is not None:
-                entries.append(entry)
+    for day, project, minutes in rows:
+        entries.append(
+            WorkEntry(
+                day=WorkEntry.from_row(
+                    {"date": day, "project": project, "minutes": str(minutes)}
+                ).day,
+                project=project,
+                minutes=minutes,
+            )
+        )
 
     return entries
 
 
-def save_entries(entries: list[WorkEntry]) -> None:
-    # Save WorkEntry objects to CSV.
-    with DATA_FILE.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        writer.writeheader()
-        for entry in entries:
-            writer.writerow(entry.to_row())
+def delete_all_entries() -> None:
+    initialize_database()
+
+    with get_connection() as conn:
+        conn.execute("DELETE FROM entries")
