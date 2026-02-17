@@ -17,6 +17,8 @@ from pathlib import Path
 import json
 from .reports import totals_by_project, minutes_to_hhmm, summary
 
+from .storage import load_entries, add_entry, delete_entry, DB_FILE
+
 
 
 def parse_date_iso(text: str) -> date:
@@ -61,7 +63,8 @@ def cmd_list(args: argparse.Namespace) -> None:
     entries_sorted = sorted(entries, key=lambda e: e.day, reverse=True)
 
     for i, e in enumerate(entries_sorted, start=1):
-        print(f"{i}) {e.day.isoformat()} | {e.project} | {e.minutes} min ({minutes_to_hhmm(e.minutes)})")
+        print(f"{e.id}) {e.day.isoformat()} | {e.project} | {e.minutes} min")
+
 
 
 def cmd_totals(args: argparse.Namespace) -> None:
@@ -87,14 +90,9 @@ def cmd_totals(args: argparse.Namespace) -> None:
 
 
 def cmd_add(args: argparse.Namespace) -> None:
-    # Add an entry via arguments, then store it in SQLite.
-    entry = WorkEntry(day=args.date, project=args.project, minutes=args.minutes)
-
+    entry = WorkEntry(id=None, day=args.date, project=args.project, minutes=args.minutes)
     add_entry(entry)
-
-
-   # Print where the DB file lives, useful on Windows.
-    print(f"Added. Saved to {DB_FILE.resolve()}")
+    print(f"Added entry with id={entry.id}")
 
 
 def cmd_report(args: argparse.Namespace) -> None:
@@ -227,6 +225,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show overall summary statistics."
     )
     p_summary.set_defaults(func=cmd_summary)
+
+    p_delete = subparsers.add_parser("delete", help="Delete entry by id.")
+    p_delete.add_argument("--id", required=True, type=int, help="ID of entry to delete.")
+    p_delete.set_defaults(func=cmd_delete)
+
   
     return parser
 
@@ -238,3 +241,8 @@ def main(argv: list[str] | None = None) -> None:
 
     # Each subcommand set args.func to the right function.
     args.func(args)
+
+def cmd_delete(args: argparse.Namespace) -> None:
+    delete_entry(args.id)
+    print(f"Deleted entry with id={args.id}")
+

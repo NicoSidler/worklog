@@ -6,14 +6,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from typing import Optional
 
 
 @dataclass
 class WorkEntry:
-    # A single work entry in your log.
+    id: Optional[int]  # None before insert
     day: date
     project: str
     minutes: int
+
 
     @staticmethod
     def from_row(row: dict[str, str]) -> "WorkEntry | None":

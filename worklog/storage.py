@@ -7,6 +7,8 @@ from pathlib import Path
 import sqlite3
 
 from .models import WorkEntry
+from datetime import date
+
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -37,10 +39,11 @@ def add_entry(entry: WorkEntry) -> None:
     initialize_database()
 
     with get_connection() as conn:
-        conn.execute(
+        cursor = conn.execute(
             "INSERT INTO entries (day, project, minutes) VALUES (?, ?, ?)",
             (entry.day.isoformat(), entry.project, entry.minutes),
         )
+        entry.id = cursor.lastrowid
 
 
 def load_entries() -> list[WorkEntry]:
@@ -48,17 +51,16 @@ def load_entries() -> list[WorkEntry]:
 
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT day, project, minutes FROM entries"
+            "SELECT id, day, project, minutes FROM entries"
         ).fetchall()
 
     entries: list[WorkEntry] = []
 
-    for day, project, minutes in rows:
+    for row_id, day, project, minutes in rows:
         entries.append(
             WorkEntry(
-                day=WorkEntry.from_row(
-                    {"date": day, "project": project, "minutes": str(minutes)}
-                ).day,
+                id=row_id,
+                day=date.fromisoformat(day),
                 project=project,
                 minutes=minutes,
             )
@@ -67,8 +69,18 @@ def load_entries() -> list[WorkEntry]:
     return entries
 
 
+
 def delete_all_entries() -> None:
     initialize_database()
 
     with get_connection() as conn:
         conn.execute("DELETE FROM entries")
+
+def delete_entry(entry_id: int) -> None:
+    initialize_database()
+
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM entries WHERE id = ?",
+            (entry_id,),
+        )
